@@ -2,19 +2,432 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Text-to-Audio A/B Test</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 2rem; }
-    .question { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; }
-    button.choice { margin-right: 1rem; padding: 0.5rem 1rem; }
-    .submitted { opacity: 0.6; pointer-events: none; }
+    :root {
+      --primary-color: #667eea;
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --secondary-color: #f093fb;
+      --success-color: #4ade80;
+      --error-color: #f87171;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --background: #f8fafc;
+      --card-background: #ffffff;
+      --border-color: #e5e7eb;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --border-radius: 16px;
+      --border-radius-sm: 8px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--background);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2rem 0;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .progress-section {
+      margin-bottom: 2rem;
+    }
+
+    .progress-bar {
+      background: #e5e7eb;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-gradient);
+      border-radius: 999px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .question-container {
+      display: grid;
+      gap: 2rem;
+    }
+
+    .question-card {
+      background: var(--card-background);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .question-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .question-header {
+      background: var(--primary-gradient);
+      padding: 1.5rem 2rem;
+      color: white;
+    }
+
+    .question-number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .question-content {
+      padding: 2rem;
+    }
+
+    .audio-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .audio-option {
+      text-align: center;
+      padding: 1.5rem;
+      border: 2px solid var(--border-color);
+      border-radius: var(--border-radius-sm);
+      transition: all 0.3s ease;
+      background: #fafafa;
+    }
+
+    .audio-option:hover {
+      border-color: var(--primary-color);
+      background: #f0f4ff;
+    }
+
+    .audio-option.selected {
+      border-color: var(--primary-color);
+      background: #e0f2fe;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .audio-label {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .audio-controls {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    audio {
+      width: 100%;
+      height: 40px;
+      border-radius: var(--border-radius-sm);
+    }
+
+    .choice-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .choice-btn {
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: var(--border-radius-sm);
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      min-width: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .choice-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .choice-btn:active {
+      transform: translateY(0);
+    }
+
+    .choice-btn.loading {
+      pointer-events: none;
+    }
+
+    .choice-btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid transparent;
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .choice-btn.selected {
+      background: var(--success-color);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .choice-btn.selected:hover {
+      background: var(--success-color);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .status {
+      margin-top: 1.5rem;
+      text-align: center;
+      padding: 1rem;
+      border-radius: var(--border-radius-sm);
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+    }
+
+    .status.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .status.success {
+      background: rgba(74, 222, 128, 0.1);
+      color: var(--success-color);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+
+    .status.error {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--error-color);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .submitted {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .submitted .audio-option {
+      background: #f9f9f9;
+      border-color: #d1d5db;
+    }
+
+    .submitted .choice-btn {
+      background: #9ca3af;
+    }
+
+    .navigation {
+      display: flex;
+      justify-content: center;
+      margin-top: 3rem;
+      gap: 1rem;
+    }
+
+    .nav-btn {
+      background: var(--card-background);
+      color: var(--primary-color);
+      border: 2px solid var(--primary-color);
+      padding: 1rem 2rem;
+      border-radius: var(--border-radius-sm);
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn:hover {
+      background: var(--primary-color);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .loading-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .audio-section {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .choice-buttons {
+        flex-direction: column;
+      }
+      
+      .question-content {
+        padding: 1.5rem;
+      }
+      
+      .question-header {
+        padding: 1rem 1.5rem;
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Text-to-Audio A/B Test</h1>
-  <div id="question-container"></div>
-  <button onclick="loadNextPage()">Next Page</button>
-  <p id="progress"></p>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-headphones"></i> Audio Comparison Study</h1>
+      <p>Listen carefully to each pair of audio samples and select the one you prefer. Your choices help us improve our text-to-audio technology.</p>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-text" id="progress-text">Loading questions...</div>
+    </div>
+
+    <div class="question-container" id="question-container"></div>
+
+    <div class="navigation">
+      <button class="nav-btn" id="prev-btn" onclick="loadPreviousPage()" disabled>
+        <i class="fas fa-chevron-left"></i> Previous
+      </button>
+      <button class="nav-btn" id="next-btn" onclick="loadNextPage()">
+        Next <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
 
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbzc8Pat-BIEgdjsImdJIXVhx61T7IQrjp8dD1OnNSCIq-PXV2xqumrRef4bcQoQzUUX/exec";
@@ -22,59 +435,280 @@
     let allQuestions = [];
     let currentPage = 0;
     const pageSize = 5;
+    let answers = {}; // Store all answers locally
+    let submittedAnswers = new Set();
 
     async function loadQuestions() {
-      const res = await fetch("assets/questions.json");
-      allQuestions = await res.json();
-      loadNextPage();
+      showLoading(true);
+      try {
+        const res = await fetch("assets/questions.json");
+        allQuestions = await res.json();
+        loadCurrentPage();
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        document.getElementById('progress-text').textContent = 'Error loading questions. Please refresh the page.';
+      } finally {
+        showLoading(false);
+      }
     }
 
-    function loadNextPage() {
+    function showLoading(show) {
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.toggle('show', show);
+    }
+
+    function updateProgress() {
+      const totalPages = Math.ceil(allQuestions.length / pageSize);
+      const answeredCount = Object.keys(answers).length;
+      const totalQuestions = allQuestions.length;
+      const progressPercent = ((currentPage + 1) / totalPages) * 100;
+      
+      document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+      document.getElementById('progress-text').textContent = 
+        `Page ${currentPage + 1} of ${totalPages} (${answeredCount}/${totalQuestions} questions answered)`;
+    }
+
+    function updateNavigationButtons() {
+      const totalPages = Math.ceil(allQuestions.length / pageSize);
+      document.getElementById('prev-btn').disabled = currentPage === 0;
+      
+      if (currentPage >= totalPages - 1) {
+        const answeredCount = Object.keys(answers).length;
+        const totalQuestions = allQuestions.length;
+        
+        if (answeredCount === totalQuestions) {
+          document.getElementById('next-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Submit All Answers';
+          document.getElementById('next-btn').disabled = false;
+        } else {
+          document.getElementById('next-btn').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Complete All Questions (${answeredCount}/${totalQuestions})`;
+          document.getElementById('next-btn').disabled = true;
+        }
+      } else {
+        document.getElementById('next-btn').innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
+        document.getElementById('next-btn').disabled = false;
+      }
+    }
+
+    function loadCurrentPage() {
       const container = document.getElementById("question-container");
       container.innerHTML = "";
+      
       const start = currentPage * pageSize;
       const end = start + pageSize;
       const pageQuestions = allQuestions.slice(start, end);
 
-      pageQuestions.forEach(q => {
-        const qDiv = document.createElement("div");
-        qDiv.className = "question";
-        qDiv.innerHTML = `
-          <h3>Question ${q.questionID}</h3>
-          <p>
-            <b>Audio A:</b><br><audio controls src="${q.a_url}"></audio><br><br>
-            <b>Audio B:</b><br><audio controls src="${q.b_url}"></audio><br><br>
-            <button class="choice" onclick="submitAnswer(${q.questionID}, 'A', '${q.a_url}', '${q.b_url}', this)">Choose A</button>
-            <button class="choice" onclick="submitAnswer(${q.questionID}, 'B', '${q.a_url}', '${q.b_url}', this)">Choose B</button>
-          </p>
-          <p class="status" id="status-${q.questionID}"></p>
-        `;
-        container.appendChild(qDiv);
+      pageQuestions.forEach((q, index) => {
+        setTimeout(() => {
+          const qDiv = document.createElement("div");
+          qDiv.className = "question-card fade-in";
+          
+          // Check if this question has been answered
+          const isAnswered = answers.hasOwnProperty(q.questionID);
+          const selectedChoice = answers[q.questionID]?.selected;
+          
+          qDiv.innerHTML = `
+            <div class="question-header">
+              <div class="question-number">
+                <i class="fas fa-music"></i>
+                Question ${q.questionID}
+                ${isAnswered ? '<i class="fas fa-check-circle" style="margin-left: auto; opacity: 0.8;"></i>' : ''}
+              </div>
+            </div>
+            <div class="question-content">
+              <div class="audio-section">
+                <div class="audio-option ${selectedChoice === 'A' ? 'selected' : ''}">
+                  <div class="audio-label">
+                    <i class="fas fa-play-circle"></i>
+                    Audio A
+                    ${selectedChoice === 'A' ? '<i class="fas fa-check" style="color: var(--success-color);"></i>' : ''}
+                  </div>
+                  <audio controls src="${q.a_url}" class="audio-controls"></audio>
+                </div>
+                <div class="audio-option ${selectedChoice === 'B' ? 'selected' : ''}">
+                  <div class="audio-label">
+                    <i class="fas fa-play-circle"></i>
+                    Audio B
+                    ${selectedChoice === 'B' ? '<i class="fas fa-check" style="color: var(--success-color);"></i>' : ''}
+                  </div>
+                  <audio controls src="${q.b_url}" class="audio-controls"></audio>
+                </div>
+              </div>
+              <div class="choice-buttons">
+                <button class="choice-btn ${selectedChoice === 'A' ? 'selected' : ''}" onclick="selectAnswer(${q.questionID}, 'A', '${q.a_url}', '${q.b_url}', this)">
+                  <i class="fas fa-thumbs-up"></i>
+                  Choose A
+                </button>
+                <button class="choice-btn ${selectedChoice === 'B' ? 'selected' : ''}" onclick="selectAnswer(${q.questionID}, 'B', '${q.a_url}', '${q.b_url}', this)">
+                  <i class="fas fa-thumbs-up"></i>
+                  Choose B
+                </button>
+              </div>
+              <div class="status ${isAnswered ? 'success show' : ''}" id="status-${q.questionID}">
+                ${isAnswered ? `<i class="fas fa-check-circle"></i> Selected: Option ${selectedChoice}` : ''}
+              </div>
+            </div>
+          `;
+          
+          container.appendChild(qDiv);
+        }, index * 100);
       });
 
-      document.getElementById("progress").textContent = `Page ${currentPage + 1} of ${Math.ceil(allQuestions.length / pageSize)}`;
-      currentPage++;
+      updateProgress();
+      updateNavigationButtons();
     }
 
-    function submitAnswer(questionID, selected, a_url, b_url, btn) {
+    function loadNextPage() {
+      const totalPages = Math.ceil(allQuestions.length / pageSize);
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        loadCurrentPage();
+      } else {
+        // Check if all questions are answered before submitting
+        const answeredCount = Object.keys(answers).length;
+        const totalQuestions = allQuestions.length;
+        
+        if (answeredCount === totalQuestions) {
+          submitAllAnswers();
+        } else {
+          showIncompleteMessage();
+        }
+      }
+    }
+
+    function loadPreviousPage() {
+      if (currentPage > 0) {
+        currentPage--;
+        loadCurrentPage();
+      }
+    }
+
+    function selectAnswer(questionID, selected, a_url, b_url, btn) {
+      // Store answer locally
+      answers[questionID] = {
+        questionID,
+        selected,
+        a_url,
+        b_url,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Update UI immediately
+      const questionCard = btn.closest('.question-card');
       const status = document.getElementById(`status-${questionID}`);
-      fetch(scriptURL, {
-        method: 'POST',
-        body: JSON.stringify({
-          userID, questionID, selected, a_url, b_url
-        }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-      }).then(res => res.json())
-        .then(() => {
-          status.textContent = `Answer recorded: ${selected}`;
-          btn.parentElement.classList.add('submitted');
-        })
-        .catch(err => {
-          status.textContent = "❌ Error saving answer.";
-          console.error(err);
-        });
+      const allButtons = questionCard.querySelectorAll('.choice-btn');
+      const allAudioOptions = questionCard.querySelectorAll('.audio-option');
+      
+      // Remove selection from all buttons and audio options
+      allButtons.forEach(b => b.classList.remove('selected'));
+      allAudioOptions.forEach(option => option.classList.remove('selected'));
+      
+      // Add selection to clicked button and corresponding audio option
+      btn.classList.add('selected');
+      const audioOptionIndex = selected === 'A' ? 0 : 1;
+      allAudioOptions[audioOptionIndex].classList.add('selected');
+      
+      // Update status
+      status.innerHTML = `<i class="fas fa-check-circle"></i> Selected: Option ${selected}`;
+      status.className = 'status success show';
+      
+      // Update question header to show completion
+      const questionNumber = questionCard.querySelector('.question-number');
+      if (!questionNumber.querySelector('.fa-check-circle')) {
+        questionNumber.innerHTML += ' <i class="fas fa-check-circle" style="margin-left: auto; opacity: 0.8;"></i>';
+      }
+      
+      // Update progress and navigation
+      updateProgress();
+      updateNavigationButtons();
     }
 
+    async function submitAllAnswers() {
+      showLoading(true);
+      
+      try {
+        // Prepare data for submission in the required format
+        const batchAnswers = Object.values(answers).map(answer => [
+          userID,
+          answer.questionID,
+          answer.selected,
+          answer.a_url,
+          answer.b_url
+        ]);
+        
+        const response = await fetch(scriptURL, {
+          method: 'POST',
+          body: JSON.stringify({ batch: batchAnswers }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        
+        const result = await response.json();
+        showCompletionMessage();
+        
+      } catch (error) {
+        console.error('Error submitting answers:', error);
+        showSubmissionError();
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function showIncompleteMessage() {
+      const answeredCount = Object.keys(answers).length;
+      const totalQuestions = allQuestions.length;
+      const container = document.getElementById("question-container");
+      
+      container.innerHTML = `
+        <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 3rem; color: var(--error-color); margin-bottom: 1rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Please Complete All Questions</h2>
+          <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+            You have answered ${answeredCount} out of ${totalQuestions} questions. Please go back and complete all questions before submitting.
+          </p>
+          <button class="choice-btn" onclick="currentPage = 0; loadCurrentPage();">
+            <i class="fas fa-arrow-left"></i> Go Back to Questions
+          </button>
+        </div>
+      `;
+    }
+
+    function showSubmissionError() {
+      const container = document.getElementById("question-container");
+      container.innerHTML = `
+        <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 3rem; color: var(--error-color); margin-bottom: 1rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Submission Failed</h2>
+          <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+            There was an error submitting your answers. Please try again.
+          </p>
+          <button class="choice-btn" onclick="submitAllAnswers();">
+            <i class="fas fa-retry"></i> Try Again
+          </button>
+        </div>
+      `;
+    }
+
+    function showCompletionMessage() {
+      const container = document.getElementById("question-container");
+      container.innerHTML = `
+        <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 3rem; color: var(--success-color); margin-bottom: 1rem;">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Survey Complete!</h2>
+          <p style="color: var(--text-secondary); font-size: 1.1rem;">
+            Thank you for participating in our audio comparison study. All ${allQuestions.length} answers have been successfully submitted!
+          </p>
+        </div>
+      `;
+      document.getElementById('next-btn').style.display = 'none';
+      document.getElementById('prev-btn').style.display = 'none';
+    }
+
+    // Initialize the application
     loadQuestions();
   </script>
 </body>

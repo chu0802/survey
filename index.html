@@ -430,7 +430,7 @@
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbxfDAPypBUANLkkvZA_5jDb-v7gixir28ghyVDH-jChE9KTQb_7dSydY1JrQ_RF0XBg/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwQRMsdEEVz9R5JqBeZmeP7AyQXcjJLaLHFKhb2hww6KiDzeK-gOuyj8tf03LooUkui/exec";
     const userID = crypto.randomUUID();
     let allQuestions = [];
     let currentPage = 0;
@@ -627,13 +627,14 @@
       
       try {
         // Prepare data for submission in the required format
-        const batchAnswers = Object.values(answers).map(answer => [
-          userID,
-          answer.questionID,
-          answer.selected,
-          answer.a_url,
-          answer.b_url
-        ]);
+        const batchAnswers = Object.values(answers).map(answer => ({
+          userID: userID,
+          questionID: answer.questionID,
+          selected: answer.selected,
+          a_url: answer.a_url,
+          b_url: answer.b_url,
+          timestamp: answer.timestamp
+        }));
         
         const response = await fetch(scriptURL, {
           method: 'POST',

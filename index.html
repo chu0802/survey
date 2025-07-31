@@ -17,7 +17,7 @@
   <p id="progress"></p>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbz_7H2YhfjO03MKEfIu2_eZybffC4Ixk6_nYsKP0LkNkGB0W9GQyTYx5yzRObUf4XLA/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzc8Pat-BIEgdjsImdJIXVhx61T7IQrjp8dD1OnNSCIq-PXV2xqumrRef4bcQoQzUUX/exec";
     const userID = crypto.randomUUID();
     let allQuestions = [];
     let currentPage = 0;
@@ -63,7 +63,7 @@
         body: JSON.stringify({
           userID, questionID, selected, a_url, b_url
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
       }).then(res => res.json())
         .then(() => {
           status.textContent = `Answer recorded: ${selected}`;

@@ -133,6 +133,65 @@
       padding: 2rem;
     }
 
+    .prompt-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      border-radius: var(--border-radius-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    .image-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .question-image {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: var(--border-radius-sm);
+      box-shadow: var(--shadow);
+      object-fit: contain;
+    }
+
+    .prompt-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .prompt-label {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .prompt-text {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      background: white;
+      padding: 1rem;
+      border-radius: var(--border-radius-sm);
+      border-left: 4px solid var(--primary-color);
+      margin-bottom: 1rem;
+      font-style: italic;
+    }
+
+    .instruction-text {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
     .audio-section {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -365,6 +424,16 @@
         font-size: 2rem;
       }
       
+      .prompt-section {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      
+      .question-image {
+        max-height: 200px;
+      }
+      
       .audio-section {
         grid-template-columns: 1fr;
         gap: 1rem;
@@ -402,15 +471,15 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1><i class="fas fa-headphones"></i> Audio Comparison Study</h1>
-      <p>Listen carefully to each pair of audio samples and select the one you prefer. Your choices help us improve our text-to-audio technology.</p>
+      <h1><i class="fas fa-headphones"></i> Audio-Visual Interaction Study</h1>
+      <p>Welcome to our research study on audio-visual interaction evaluation.</p>
     </div>
 
     <div class="progress-section">
       <div class="progress-bar">
         <div class="progress-fill" id="progress-fill"></div>
       </div>
-      <div class="progress-text" id="progress-text">Loading questions...</div>
+      <div class="progress-text" id="progress-text">Please read the task instructions below</div>
     </div>
 
     <div class="question-container" id="question-container"></div>
@@ -430,26 +499,125 @@
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwQRMsdEEVz9R5JqBeZmeP7AyQXcjJLaLHFKhb2hww6KiDzeK-gOuyj8tf03LooUkui/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwshvEsDylmj70qd7tHmi0IRPT72f9K8lRI4fT1MkCU_9Mhc-Zjfu8FD7jqPJP_hTGK/exec";
     const userID = crypto.randomUUID();
     let allQuestions = [];
     let currentPage = 0;
     const pageSize = 5;
     let answers = {}; // Store all answers locally
     let submittedAnswers = new Set();
+    let surveyStarted = false; // Track if survey has started
+    let startTime = null; // Record when user starts the survey
 
     async function loadQuestions() {
       showLoading(true);
       try {
         const res = await fetch("assets/questions.json");
         allQuestions = await res.json();
-        loadCurrentPage();
+        showTaskDescription();
       } catch (error) {
         console.error('Error loading questions:', error);
-        document.getElementById('progress-text').textContent = 'Error loading questions. Please refresh the page.';
+        const container = document.getElementById("question-container");
+        container.innerHTML = `
+          <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+            <div style="font-size: 3rem; color: var(--error-color); margin-bottom: 1rem;">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Error Loading Study</h2>
+            <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+              Unable to load the questions. Please refresh the page and try again.
+            </p>
+            <button class="choice-btn" onclick="location.reload();">
+              <i class="fas fa-refresh"></i> Refresh Page
+            </button>
+          </div>
+        `;
+        document.getElementById('progress-text').textContent = 'Error loading questions';
       } finally {
         showLoading(false);
       }
+    }
+
+    function showTaskDescription() {
+      const container = document.getElementById("question-container");
+      const progressSection = document.querySelector('.progress-section');
+      const navigation = document.querySelector('.navigation');
+      
+      // Hide progress and navigation initially
+      progressSection.style.display = 'none';
+      navigation.style.display = 'none';
+      
+      container.innerHTML = `
+        <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 3rem; color: var(--primary-color); margin-bottom: 2rem;">
+            <i class="fas fa-tasks"></i>
+          </div>
+          <h2 style="margin-bottom: 2rem; color: var(--text-primary);">Task Instructions</h2>
+          
+          <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <div style="background: #f8f9fa; padding: 2rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; border-left: 4px solid var(--primary-color);">
+              <h3 style="color: var(--primary-color); margin-bottom: 1rem;"><i class="fas fa-bullseye"></i> Your Task</h3>
+              <p style="margin-bottom: 1rem; line-height: 1.6;">You will evaluate <strong>${allQuestions.length} audio samples</strong> that represent different interactions with objects. For each question, you need to:</p>
+              
+              <ol style="margin-left: 1.5rem; line-height: 1.8;">
+                <li><strong>Look at the image</strong> showing an object</li>
+                <li><strong>Read the interaction prompt</strong> describing how someone interacts with that object</li>
+                <li><strong>Listen to both audio samples (A & B)</strong> generated from the prompt</li>
+                <li><strong>Choose the audio</strong> that better represents the described interaction</li>
+              </ol>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; border-left: 4px solid #ffc107;">
+              <h4 style="color: #856404; margin-bottom: 0.5rem;"><i class="fas fa-lightbulb"></i> Tips for Better Evaluation</h4>
+              <ul style="margin-left: 1.5rem; color: #856404; line-height: 1.6;">
+                <li>Use headphones for better audio quality</li>
+                <li>You can replay audio samples as many times as needed</li>
+                <li>Consider both the sound quality and how well it matches the described interaction</li>
+                <li>Take your time - there's no rush</li>
+              </ul>
+            </div>
+            
+            <div style="background: #d1ecf1; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; border-left: 4px solid #17a2b8;">
+              <h4 style="color: #0c5460; margin-bottom: 0.5rem;"><i class="fas fa-clock"></i> Time Estimate</h4>
+              <p style="color: #0c5460; margin: 0;">This study should take approximately <strong>5-10 minutes</strong> to complete.</p>
+            </div>
+            
+            <div style="background: #f8d7da; border: 2px solid #dc3545; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; text-align: center;">
+              <div style="color: #dc3545; font-size: 1.5rem; margin-bottom: 0.5rem;">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <h3 style="color: #721c24; margin-bottom: 0.5rem; font-weight: bold;">⚠️ IMPORTANT WARNING ⚠️</h3>
+              <p style="color: #721c24; font-weight: 600; margin: 0; font-size: 1.1rem;">
+                Do NOT refresh this page or close the window during the study.<br>
+                Your responses will only be saved when you complete ALL questions and submit at the end.
+              </p>
+            </div>
+          </div>
+          
+          <button class="choice-btn" onclick="startSurvey()" style="font-size: 1.2rem; padding: 1.2rem 2.5rem; margin-top: 1rem;">
+            <i class="fas fa-play"></i>
+            Start the Survey
+                     </button>
+         </div>
+       `;
+       
+       updateProgress();
+     }
+
+    function startSurvey() {
+      surveyStarted = true;
+      startTime = new Date(); // Record start time
+      
+      const progressSection = document.querySelector('.progress-section');
+      const navigation = document.querySelector('.navigation');
+      
+      // Show progress and navigation
+      progressSection.style.display = 'block';
+      navigation.style.display = 'flex';
+      
+      // Start with first page
+      currentPage = 0;
+      loadCurrentPage();
     }
 
     function showLoading(show) {
@@ -458,6 +626,12 @@
     }
 
     function updateProgress() {
+      if (!surveyStarted) {
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('progress-text').textContent = 'Ready to start - Please read the instructions below';
+        return;
+      }
+      
       const totalPages = Math.ceil(allQuestions.length / pageSize);
       const answeredCount = Object.keys(answers).length;
       const totalQuestions = allQuestions.length;
@@ -509,12 +683,22 @@
           qDiv.innerHTML = `
             <div class="question-header">
               <div class="question-number">
-                <i class="fas fa-music"></i>
+                <i class="fas fa-eye"></i>
                 Question ${q.questionID}
                 ${isAnswered ? '<i class="fas fa-check-circle" style="margin-left: auto; opacity: 0.8;"></i>' : ''}
               </div>
             </div>
             <div class="question-content">
+              <div class="prompt-section">
+                <div class="image-container">
+                  <img src="${q.image_url}" alt="Object image for question ${q.questionID}" class="question-image">
+                </div>
+                <div class="prompt-container">
+                  <h4 class="prompt-label"><i class="fas fa-comment-dots"></i> Interaction Prompt:</h4>
+                  <p class="prompt-text">"${q.prompt}"</p>
+                  <p class="instruction-text">Which audio better represents this interaction to the object in the image?</p>
+                </div>
+              </div>
               <div class="audio-section">
                 <div class="audio-option ${selectedChoice === 'A' ? 'selected' : ''}">
                   <div class="audio-label">
@@ -534,11 +718,11 @@
                 </div>
               </div>
               <div class="choice-buttons">
-                <button class="choice-btn ${selectedChoice === 'A' ? 'selected' : ''}" onclick="selectAnswer(${q.questionID}, 'A', '${q.a_url}', '${q.b_url}', this)">
+                <button class="choice-btn ${selectedChoice === 'A' ? 'selected' : ''}" onclick="selectAnswer(${q.questionID}, 'A', '${q.a_url}', '${q.b_url}', '${q.prompt}', '${q.image_url}', this)">
                   <i class="fas fa-thumbs-up"></i>
                   Choose A
                 </button>
-                <button class="choice-btn ${selectedChoice === 'B' ? 'selected' : ''}" onclick="selectAnswer(${q.questionID}, 'B', '${q.a_url}', '${q.b_url}', this)">
+                <button class="choice-btn ${selectedChoice === 'B' ? 'selected' : ''}" onclick="selectAnswer(${q.questionID}, 'B', '${q.a_url}', '${q.b_url}', '${q.prompt}', '${q.image_url}', this)">
                   <i class="fas fa-thumbs-up"></i>
                   Choose B
                 </button>
@@ -582,13 +766,15 @@
       }
     }
 
-    function selectAnswer(questionID, selected, a_url, b_url, btn) {
+    function selectAnswer(questionID, selected, a_url, b_url, prompt, image_url, btn) {
       // Store answer locally
       answers[questionID] = {
         questionID,
         selected,
         a_url,
         b_url,
+        prompt,
+        image_url,
         timestamp: new Date().toISOString()
       };
       
@@ -626,6 +812,11 @@
       showLoading(true);
       
       try {
+        // Calculate total completion time
+        const endTime = new Date();
+        const totalTimeMs = endTime - startTime;
+        const totalTimeSeconds = Math.round(totalTimeMs / 1000 * 100) / 100; // Round to 2 decimal places
+        
         // Prepare data for submission in the required format
         const batchAnswers = Object.values(answers).map(answer => ({
           userID: userID,
@@ -633,7 +824,9 @@
           selected: answer.selected,
           a_url: answer.a_url,
           b_url: answer.b_url,
-          timestamp: answer.timestamp
+          prompt: answer.prompt,
+          timestamp: answer.timestamp,
+          totalTime: totalTimeSeconds
         }));
         
         const response = await fetch(scriptURL, {
@@ -643,7 +836,7 @@
         });
         
         const result = await response.json();
-        showCompletionMessage();
+        showCompletionMessage(totalTimeSeconds);
         
       } catch (error) {
         console.error('Error submitting answers:', error);
@@ -692,7 +885,7 @@
       `;
     }
 
-    function showCompletionMessage() {
+    function showCompletionMessage(totalTimeSeconds) {
       const container = document.getElementById("question-container");
       container.innerHTML = `
         <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
@@ -700,14 +893,142 @@
             <i class="fas fa-check-circle"></i>
           </div>
           <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Survey Complete!</h2>
-          <p style="color: var(--text-secondary); font-size: 1.1rem;">
+          <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 1.5rem;">
             Thank you for participating in our audio comparison study. All ${allQuestions.length} answers have been successfully submitted!
           </p>
+          <div style="background: #d4edda; padding: 1.5rem; border-radius: var(--border-radius-sm); border-left: 4px solid var(--success-color); margin-bottom: 1rem;">
+            <h4 style="color: #155724; margin-bottom: 0.5rem;"><i class="fas fa-stopwatch"></i> Completion Time</h4>
+            <p style="color: #155724; margin: 0; font-size: 1.1rem; font-weight: 600;">
+              You completed the study in <strong>${totalTimeSeconds} seconds</strong>
+            </p>
+          </div>
+          <div style="background: #e7f3ff; padding: 1.5rem; border-radius: var(--border-radius-sm); border-left: 4px solid var(--primary-color); margin-bottom: 1rem;">
+            <h4 style="color: #004085; margin-bottom: 0.5rem;"><i class="fas fa-id-card"></i> Your Completion ID</h4>
+            <p style="color: #004085; margin-bottom: 1rem; font-size: 1rem;">
+              Copy this ID to prove you completed the study:
+            </p>
+            <div style="background: white; padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid #b6d7ff; position: relative;">
+              <code id="completion-id" style="font-family: 'Courier New', monospace; font-size: 1.1rem; color: #004085; word-break: break-all; user-select: all;">
+                ${userID}
+              </code>
+              <button onclick="copyCompletionId()" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: var(--primary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                <i class="fas fa-copy"></i> Copy
+              </button>
+            </div>
+          </div>
         </div>
       `;
       document.getElementById('next-btn').style.display = 'none';
       document.getElementById('prev-btn').style.display = 'none';
     }
+
+    // Copy completion ID to clipboard
+    function copyCompletionId() {
+      const completionId = document.getElementById('completion-id').textContent.trim();
+      const btn = event.target.closest('button');
+      const originalHTML = btn.innerHTML;
+      
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(completionId).then(() => {
+          // Success feedback
+          btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          btn.style.background = 'var(--success-color)';
+          
+          setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.style.background = 'var(--primary-color)';
+          }, 2000);
+        }).catch(err => {
+          console.error('Clipboard API failed: ', err);
+          fallbackCopy(completionId, btn, originalHTML);
+        });
+      } else {
+        // Use fallback method for HTTP/older browsers
+        fallbackCopy(completionId, btn, originalHTML);
+      }
+    }
+    
+    function fallbackCopy(text, btn, originalHTML) {
+      try {
+        // Create temporary textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        textarea.style.pointerEvents = 'none';
+        document.body.appendChild(textarea);
+        
+        // Select and copy
+        textarea.select();
+        textarea.setSelectionRange(0, text.length);
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        if (successful) {
+          // Success feedback
+          btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          btn.style.background = 'var(--success-color)';
+          
+          setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.style.background = 'var(--primary-color)';
+          }, 2000);
+        } else {
+          throw new Error('execCommand failed');
+        }
+      } catch (err) {
+        console.error('Fallback copy failed: ', err);
+        // Final fallback: select the text for manual copy
+        selectText();
+        btn.innerHTML = '<i class="fas fa-hand-pointer"></i> Selected';
+        btn.style.background = '#ffc107';
+        
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.style.background = 'var(--primary-color)';
+        }, 3000);
+      }
+    }
+    
+    function selectText() {
+      const completionIdElement = document.getElementById('completion-id');
+      const range = document.createRange();
+      range.selectNodeContents(completionIdElement);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      // Show instructions
+      const instruction = document.createElement('div');
+      instruction.innerHTML = `
+        <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+                    background: #ff6b6b; color: white; padding: 1rem 2rem; 
+                    border-radius: 8px; z-index: 10000; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          <strong>ID Selected!</strong><br>
+          Press <kbd style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">Ctrl+C</kbd> (or <kbd style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">Cmd+C</kbd>) to copy
+        </div>
+      `;
+      document.body.appendChild(instruction);
+      
+      setTimeout(() => {
+        document.body.removeChild(instruction);
+      }, 5000);
+    }
+
+    // Auto-pause other audio when playing one
+    document.addEventListener('play', function(e) {
+      if (e.target.tagName === 'AUDIO') {
+        // Find all audio elements on the page
+        const allAudios = document.querySelectorAll('audio');
+        allAudios.forEach(audio => {
+          // Pause all other audio elements except the one being played
+          if (audio !== e.target && !audio.paused) {
+            audio.pause();
+          }
+        });
+      }
+    }, true);
 
     // Initialize the application
     loadQuestions();

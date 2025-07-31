@@ -1,17 +1,23 @@
 [
     {
       "questionID": 1,
-      "a_url": "data/a1.wav",
-      "b_url": "data/b1.wav"
+      "prompt": "Flicking the ceramic mug with a finger",
+      "image_url": "data/image/007.png",
+      "a_url": "data/audio/a1.wav",
+      "b_url": "data/audio/b1.wav"
     },
     {
       "questionID": 2,
-      "a_url": "data/a2.wav",
-      "b_url": "data/b2.wav"
+      "image_url": "data/image/007.png",
+      "prompt": "Rubbing the ceramic mug with a palm",
+      "a_url": "data/audio/a2.wav",
+      "b_url": "data/audio/b2.wav"
     },
     {
       "questionID": 3,
-      "a_url": "data/a3.wav",
-      "b_url": "data/b3.wav"
+      "prompt": "Scraping the ceramic mug with a fingernail",
+      "image_url": "data/image/007.png",
+      "a_url": "data/audio/a3.wav",
+      "b_url": "data/audio/b3.wav"
     }
 ]

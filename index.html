@@ -499,7 +499,7 @@
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwshvEsDylmj70qd7tHmi0IRPT72f9K8lRI4fT1MkCU_9Mhc-Zjfu8FD7jqPJP_hTGK/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwBEUkx4eWdVmHRBiWeL6RejKH1DmSrTodRc_Qohisv3WIvE5CrT0V0baR6OA86y4nz/exec";
     const userID = crypto.randomUUID();
     let allQuestions = [];
     let currentPage = 0;
@@ -817,9 +817,13 @@
         const totalTimeMs = endTime - startTime;
         const totalTimeSeconds = Math.round(totalTimeMs / 1000 * 100) / 100; // Round to 2 decimal places
         
+        // Generate verification ID
+        const verificationID = crypto.randomUUID();
+        
         // Prepare data for submission in the required format
         const batchAnswers = Object.values(answers).map(answer => ({
           userID: userID,
+          verificationID: verificationID,
           questionID: answer.questionID,
           selected: answer.selected,
           a_url: answer.a_url,
@@ -836,7 +840,7 @@
         });
         
         const result = await response.json();
-        showCompletionMessage(totalTimeSeconds);
+        showCompletionMessage(totalTimeSeconds, verificationID);
         
       } catch (error) {
         console.error('Error submitting answers:', error);
@@ -885,7 +889,7 @@
       `;
     }
 
-    function showCompletionMessage(totalTimeSeconds) {
+    function showCompletionMessage(totalTimeSeconds, verificationID) {
       const container = document.getElementById("question-container");
       container.innerHTML = `
         <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
@@ -903,13 +907,13 @@
             </p>
           </div>
           <div style="background: #e7f3ff; padding: 1.5rem; border-radius: var(--border-radius-sm); border-left: 4px solid var(--primary-color); margin-bottom: 1rem;">
-            <h4 style="color: #004085; margin-bottom: 0.5rem;"><i class="fas fa-id-card"></i> Your Completion ID</h4>
+            <h4 style="color: #004085; margin-bottom: 0.5rem;"><i class="fas fa-shield-check"></i> Your Verification ID</h4>
             <p style="color: #004085; margin-bottom: 1rem; font-size: 1rem;">
-              Copy this ID to prove you completed the study:
+              Copy this verification ID to prove you completed the study:
             </p>
             <div style="background: white; padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid #b6d7ff; position: relative;">
               <code id="completion-id" style="font-family: 'Courier New', monospace; font-size: 1.1rem; color: #004085; word-break: break-all; user-select: all;">
-                ${userID}
+                ${verificationID}
               </code>
               <button onclick="copyCompletionId()" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: var(--primary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                 <i class="fas fa-copy"></i> Copy
@@ -922,15 +926,15 @@
       document.getElementById('prev-btn').style.display = 'none';
     }
 
-    // Copy completion ID to clipboard
+    // Copy verification ID to clipboard
     function copyCompletionId() {
-      const completionId = document.getElementById('completion-id').textContent.trim();
+      const verificationId = document.getElementById('completion-id').textContent.trim();
       const btn = event.target.closest('button');
       const originalHTML = btn.innerHTML;
       
       // Try modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(completionId).then(() => {
+        navigator.clipboard.writeText(verificationId).then(() => {
           // Success feedback
           btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
           btn.style.background = 'var(--success-color)';
@@ -941,11 +945,11 @@
           }, 2000);
         }).catch(err => {
           console.error('Clipboard API failed: ', err);
-          fallbackCopy(completionId, btn, originalHTML);
+          fallbackCopy(verificationId, btn, originalHTML);
         });
       } else {
         // Use fallback method for HTTP/older browsers
-        fallbackCopy(completionId, btn, originalHTML);
+        fallbackCopy(verificationId, btn, originalHTML);
       }
     }
     
@@ -1005,7 +1009,7 @@
         <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
                     background: #ff6b6b; color: white; padding: 1rem 2rem; 
                     border-radius: 8px; z-index: 10000; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-          <strong>ID Selected!</strong><br>
+          <strong>Verification ID Selected!</strong><br>
           Press <kbd style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">Ctrl+C</kbd> (or <kbd style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">Cmd+C</kbd>) to copy
         </div>
       `;

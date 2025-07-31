@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Text-to-Audio A/B Test</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 2rem; }
+    .question { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; }
+    button.choice { margin-right: 1rem; padding: 0.5rem 1rem; }
+    .submitted { opacity: 0.6; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <h1>Text-to-Audio A/B Test</h1>
+  <div id="question-container"></div>
+  <button onclick="loadNextPage()">Next Page</button>
+  <p id="progress"></p>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbz_7H2YhfjO03MKEfIu2_eZybffC4Ixk6_nYsKP0LkNkGB0W9GQyTYx5yzRObUf4XLA/exec";
+    const userID = crypto.randomUUID();
+    let allQuestions = [];
+    let currentPage = 0;
+    const pageSize = 5;
+
+    async function loadQuestions() {
+      const res = await fetch("assets/questions.json");
+      allQuestions = await res.json();
+      loadNextPage();
+    }
+
+    function loadNextPage() {
+      const container = document.getElementById("question-container");
+      container.innerHTML = "";
+      const start = currentPage * pageSize;
+      const end = start + pageSize;
+      const pageQuestions = allQuestions.slice(start, end);
+
+      pageQuestions.forEach(q => {
+        const qDiv = document.createElement("div");
+        qDiv.className = "question";
+        qDiv.innerHTML = `
+          <h3>Question ${q.questionID}</h3>
+          <p>
+            <b>Audio A:</b><br><audio controls src="${q.a_url}"></audio><br><br>
+            <b>Audio B:</b><br><audio controls src="${q.b_url}"></audio><br><br>
+            <button class="choice" onclick="submitAnswer(${q.questionID}, 'A', '${q.a_url}', '${q.b_url}', this)">Choose A</button>
+            <button class="choice" onclick="submitAnswer(${q.questionID}, 'B', '${q.a_url}', '${q.b_url}', this)">Choose B</button>
+          </p>
+          <p class="status" id="status-${q.questionID}"></p>
+        `;
+        container.appendChild(qDiv);
+      });
+
+      document.getElementById("progress").textContent = `Page ${currentPage + 1} of ${Math.ceil(allQuestions.length / pageSize)}`;
+      currentPage++;
+    }
+
+    function submitAnswer(questionID, selected, a_url, b_url, btn) {
+      const status = document.getElementById(`status-${questionID}`);
+      fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify({
+          userID, questionID, selected, a_url, b_url
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => res.json())
+        .then(() => {
+          status.textContent = `Answer recorded: ${selected}`;
+          btn.parentElement.classList.add('submitted');
+        })
+        .catch(err => {
+          status.textContent = "❌ Error saving answer.";
+          console.error(err);
+        });
+    }
+
+    loadQuestions();
+  </script>
+</body>
+</html>

@@ -500,7 +500,14 @@
 
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbwBEUkx4eWdVmHRBiWeL6RejKH1DmSrTodRc_Qohisv3WIvE5CrT0V0baR6OA86y4nz/exec";
-    const userID = crypto.randomUUID();
+    
+    // Get or create persistent userID
+    let userID = localStorage.getItem('survey_userID');
+    if (!userID) {
+      userID = crypto.randomUUID();
+      localStorage.setItem('survey_userID', userID);
+    }
+    
     let allQuestions = [];
     let currentPage = 0;
     const pageSize = 5;
@@ -508,13 +515,73 @@
     let submittedAnswers = new Set();
     let surveyStarted = false; // Track if survey has started
     let startTime = null; // Record when user starts the survey
+    let surveyCompleted = false; // Track if survey is completed
+
+    // localStorage helper functions
+    function saveToLocalStorage(verificationID = null, completionTime = null) {
+      const surveyData = {
+        answers: answers,
+        currentPage: currentPage,
+        surveyStarted: surveyStarted,
+        startTime: startTime ? startTime.toISOString() : null,
+        surveyCompleted: surveyCompleted,
+        verificationID: verificationID,
+        completionTime: completionTime
+      };
+      localStorage.setItem(`survey_data_${userID}`, JSON.stringify(surveyData));
+    }
+
+    function loadFromLocalStorage() {
+      const savedData = localStorage.getItem(`survey_data_${userID}`);
+      if (savedData) {
+        try {
+          const data = JSON.parse(savedData);
+          answers = data.answers || {};
+          currentPage = data.currentPage || 0;
+          surveyStarted = data.surveyStarted || false;
+          surveyCompleted = data.surveyCompleted || false;
+          if (data.startTime) {
+            startTime = new Date(data.startTime);
+          }
+          // Store completion data for display
+          window.savedVerificationID = data.verificationID;
+          window.savedCompletionTime = data.completionTime;
+          return true;
+        } catch (error) {
+          console.error('Error loading saved data:', error);
+          return false;
+        }
+      }
+      return false;
+    }
+
+    function clearLocalStorage() {
+      localStorage.removeItem(`survey_data_${userID}`);
+    }
+
+    function checkIfCompleted() {
+      return surveyCompleted;
+    }
 
     async function loadQuestions() {
       showLoading(true);
       try {
         const res = await fetch("assets/questions.json");
         allQuestions = await res.json();
-        showTaskDescription();
+        
+        // Load saved data from localStorage
+        const hasLoadedData = loadFromLocalStorage();
+        
+        // Check if survey is already completed
+        if (checkIfCompleted()) {
+          showAlreadyCompletedMessage();
+        } else if (hasLoadedData && surveyStarted) {
+          // Resume survey
+          showResumeMessage();
+        } else {
+          // Show task description for new survey
+          showTaskDescription();
+        }
       } catch (error) {
         console.error('Error loading questions:', error);
         const container = document.getElementById("question-container");
@@ -536,6 +603,112 @@
       } finally {
         showLoading(false);
       }
+    }
+
+    function showAlreadyCompletedMessage() {
+      const container = document.getElementById("question-container");
+      const progressSection = document.querySelector('.progress-section');
+      const navigation = document.querySelector('.navigation');
+      
+      // Hide progress and navigation
+      progressSection.style.display = 'none';
+      navigation.style.display = 'none';
+      
+      const verificationID = window.savedVerificationID || 'Not available';
+      const completionTime = window.savedCompletionTime || 'Not available';
+      const totalQuestions = allQuestions.length;
+      
+      container.innerHTML = `
+        <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 3rem; color: var(--success-color); margin-bottom: 2rem;">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h2 style="margin-bottom: 2rem; color: var(--text-primary);">Survey Already Completed</h2>
+          
+          <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <div style="background: #d4edda; padding: 2rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; border-left: 4px solid var(--success-color);">
+              <h4 style="color: #155724; margin-bottom: 1rem;"><i class="fas fa-info-circle"></i> Thank You!</h4>
+              <p style="color: #155724; margin-bottom: 1rem; line-height: 1.6;">
+                You have already completed this survey with all ${totalQuestions} questions answered. Each participant can only submit responses once to ensure data quality.
+              </p>
+              <p style="color: #155724; margin: 0; line-height: 1.6;">
+                If you believe this is an error, please contact the research team.
+              </p>
+            </div>
+            
+            ${completionTime !== 'Not available' ? `
+            <div style="background: #d4edda; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 1rem; border-left: 4px solid var(--success-color);">
+              <h4 style="color: #155724; margin-bottom: 0.5rem;"><i class="fas fa-stopwatch"></i> Completion Time</h4>
+              <p style="color: #155724; margin: 0; font-size: 1.1rem; font-weight: 600;">
+                You completed the study in <strong>${completionTime} seconds</strong>
+              </p>
+            </div>
+            ` : ''}
+            
+            ${verificationID !== 'Not available' ? `
+            <div style="background: #e7f3ff; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 1rem;">
+              <h4 style="color: #004085; margin-bottom: 0.5rem;"><i class="fas fa-shield-check"></i> Your Verification ID</h4>
+              <p style="color: #004085; margin-bottom: 1rem; font-size: 1rem;">
+                Your completion verification ID:
+              </p>
+              <div style="background: white; padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid #b6d7ff; position: relative;">
+                <code id="completion-id" style="font-family: 'Courier New', monospace; font-size: 1.1rem; color: #004085; word-break: break-all; user-select: all;">
+                  ${verificationID}
+                </code>
+                <button onclick="copyCompletionId()" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: var(--primary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                  <i class="fas fa-copy"></i> Copy
+                </button>
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      
+      updateProgress();
+    }
+
+    function showResumeMessage() {
+      const container = document.getElementById("question-container");
+      const progressSection = document.querySelector('.progress-section');
+      const navigation = document.querySelector('.navigation');
+      
+      // Hide progress and navigation initially
+      progressSection.style.display = 'none';
+      navigation.style.display = 'none';
+      
+      const answeredCount = Object.keys(answers).length;
+      const totalQuestions = allQuestions.length;
+      
+      container.innerHTML = `
+        <div class="question-card fade-in" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 3rem; color: var(--primary-color); margin-bottom: 2rem;">
+            <i class="fas fa-play-circle"></i>
+          </div>
+          <h2 style="margin-bottom: 2rem; color: var(--text-primary);">Welcome Back!</h2>
+          
+          <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <div style="background: #e7f3ff; padding: 2rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; border-left: 4px solid var(--primary-color);">
+              <h4 style="color: #004085; margin-bottom: 1rem;"><i class="fas fa-bookmark"></i> Progress Restored</h4>
+              <p style="color: #004085; margin-bottom: 1rem; line-height: 1.6;">
+                We found your previous progress and restored it. You have answered <strong>${answeredCount} out of ${totalQuestions}</strong> questions.
+              </p>
+              <p style="color: #004085; margin: 0; line-height: 1.6;">
+                You can continue where you left off or start over if you prefer.
+              </p>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button class="choice-btn" onclick="continueSurvey()" style="font-size: 1.1rem; padding: 1rem 2rem;">
+              <i class="fas fa-play"></i>
+              Continue Survey
+            </button>
+          </div>
+        </div>
+      `;
+      
+      updateProgress();
     }
 
     function showTaskDescription() {
@@ -579,18 +752,7 @@
             
             <div style="background: #d1ecf1; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; border-left: 4px solid #17a2b8;">
               <h4 style="color: #0c5460; margin-bottom: 0.5rem;"><i class="fas fa-clock"></i> Time Estimate</h4>
-              <p style="color: #0c5460; margin: 0;">This study should take approximately <strong>5-10 minutes</strong> to complete.</p>
-            </div>
-            
-            <div style="background: #f8d7da; border: 2px solid #dc3545; padding: 1.5rem; border-radius: var(--border-radius-sm); margin-bottom: 2rem; text-align: center;">
-              <div style="color: #dc3545; font-size: 1.5rem; margin-bottom: 0.5rem;">
-                <i class="fas fa-exclamation-triangle"></i>
-              </div>
-              <h3 style="color: #721c24; margin-bottom: 0.5rem; font-weight: bold;">⚠️ IMPORTANT WARNING ⚠️</h3>
-              <p style="color: #721c24; font-weight: 600; margin: 0; font-size: 1.1rem;">
-                Do NOT refresh this page or close the window during the study.<br>
-                Your responses will only be saved when you complete ALL questions and submit at the end.
-              </p>
+              <p style="color: #0c5460; margin: 0;">This study should take approximately <strong>10-20 minutes</strong> to complete.</p>
             </div>
           </div>
           
@@ -603,6 +765,20 @@
        
        updateProgress();
      }
+
+
+
+    function continueSurvey() {
+      const progressSection = document.querySelector('.progress-section');
+      const navigation = document.querySelector('.navigation');
+      
+      // Show progress and navigation
+      progressSection.style.display = 'block';
+      navigation.style.display = 'flex';
+      
+      // Continue from current page
+      loadCurrentPage();
+    }
 
     function startSurvey() {
       surveyStarted = true;
@@ -618,6 +794,9 @@
       // Start with first page
       currentPage = 0;
       loadCurrentPage();
+      
+      // Save to localStorage
+      saveToLocalStorage();
     }
 
     function showLoading(show) {
@@ -626,9 +805,15 @@
     }
 
     function updateProgress() {
-      if (!surveyStarted) {
+      if (!surveyStarted && !surveyCompleted) {
         document.getElementById('progress-fill').style.width = '0%';
         document.getElementById('progress-text').textContent = 'Ready to start - Please read the instructions below';
+        return;
+      }
+      
+      if (surveyCompleted) {
+        document.getElementById('progress-fill').style.width = '100%';
+        document.getElementById('progress-text').textContent = 'Survey completed successfully';
         return;
       }
       
@@ -746,6 +931,7 @@
       if (currentPage < totalPages - 1) {
         currentPage++;
         loadCurrentPage();
+        saveToLocalStorage(); // Save current page state
       } else {
         // Check if all questions are answered before submitting
         const answeredCount = Object.keys(answers).length;
@@ -763,6 +949,7 @@
       if (currentPage > 0) {
         currentPage--;
         loadCurrentPage();
+        saveToLocalStorage(); // Save current page state
       }
     }
 
@@ -777,6 +964,9 @@
         image_url,
         timestamp: new Date().toISOString()
       };
+      
+      // Save to localStorage immediately
+      saveToLocalStorage();
       
       // Update UI immediately
       const questionCard = btn.closest('.question-card');
@@ -840,6 +1030,11 @@
         });
         
         const result = await response.json();
+        
+        // Mark survey as completed
+        surveyCompleted = true;
+        saveToLocalStorage(verificationID, totalTimeSeconds);
+        
         showCompletionMessage(totalTimeSeconds, verificationID);
         
       } catch (error) {
